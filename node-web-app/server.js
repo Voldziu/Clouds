@@ -22,6 +22,7 @@ app.use(bodyParser.json());
 
 //Ustawienie silnika szablonów EJS
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 //Główna trasa
 app.get('/', (req, res) => {res.render('index', { title: 'Strona główna', message: 'Witaj świecie!' });});
@@ -93,7 +94,9 @@ app.use((err, req, res, next) => {
   process.on('SIGTERM', shutdown);
 
 //Start serwera
+module.exports = app;
 module.exports.handler = serverless(app);
+
 if (process.env.NODE_ENV !== 'serverless') {
   const port = process.env.PORT || 8080;
   app.listen(port, () => {
