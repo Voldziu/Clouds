@@ -1,0 +1,14 @@
+<%- include('partials/header') %>
+<body>
+
+<div class="container">
+    <h1><%= title %></h1>
+    <div class="gallery">
+        <% images.forEach(function(image) { %>
+            <div class="gallery-item">
+                <img src="/images/gallery/<%= image %>" alt="Zdjęcie <%= image %>">
+            </div>
+        <% }); %>
+    </div>
+</div>
+<%- include('partials/footer') %>
