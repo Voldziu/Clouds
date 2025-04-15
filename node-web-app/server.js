@@ -37,14 +37,14 @@ app.put('/user', (req, res) => {res.send('Got a PUT request at /user');});
 app.delete('/user', (req, res) => {res.send('Got a DELETE request at /user');});
 app.get('/contact', (req, res) => {res.render('contact', { title: 'Kontakt' });});
 
-// Trasa dla podstrony "Galeria"
+
 app.get('/gallery', (req, res) => {
   const fs = require('fs');
   const path = require('path');
   
   const galleryDir = path.join(__dirname, 'public', 'images', 'gallery');
   
-  // Odczytaj pliki z katalogu galerii
+ 
   fs.readdir(galleryDir, (err, files) => {
       if (err) {
           console.error('Błąd odczytu katalogu galerii:', err);
@@ -54,7 +54,7 @@ app.get('/gallery', (req, res) => {
           });
       }
 
-      // Przefiltruj tylko pliki obrazów
+     
       const imageFiles = files.filter(file => 
           ['.jpg', '.jpeg', '.png', '.gif'].includes(path.extname(file).toLowerCase())
       );
