@@ -1,30 +1,18 @@
 const cacheName = 'maklowicz-pwa-v1';
 const filesToCache = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/js/main.js',
-  '/about.html',
-  '/contact.html',
-  '/images/dish1.jpg',
-  '/images/dish2.jpg',
-  '/images/dish3.jpg',
-  '/icons/favicon-96x96.png',
-  '/icons/favicon.svg',
-  '/icons/favicon.ico',
-  '/icons/apple-touch-icon.png',
-  '/icons/web-app-manifest-192x192.png',
-  '/icons/web-app-manifest-512x512.png',
-  '/icons/apple-splash-640x1136.png',
-  '/icons/apple-splash-750x1334.png',
-  '/icons/apple-splash-828x1792.png',
-  '/icons/apple-splash-1125x2436.png',
-  '/icons/apple-splash-1242x2688.png',
-  '/icons/apple-splash-1536x2048.png',
-  '/icons/apple-splash-1668x2224.png',
-  '/icons/apple-splash-1668x2388.png',
-  '/icons/apple-splash-2048x2732.png',
-  '/manifest.json'
+  './',
+  './index.html',
+  './style.css',
+  './js/main.js',
+  './js/firebase-config.js',
+  './about.html',
+  './contact.html',
+  './manifest.json',
+  './firebase-messaging-sw.js',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-96x96.png',
+  './icons/favicon.svg',
+  './icons/favicon.ico'
 ];
 
 // Instalacja Service Workera i buforowanie podstawowych plików
@@ -47,26 +35,28 @@ self.addEventListener('fetch', (event) => {
       }
       
       // W przeciwnym razie pobieramy z sieci i buforujemy
-      return fetch(event.request).then((fetchResponse) => {
-        // Pomijamy buforowanie dla żądań innych niż GET
-        if (event.request.method !== 'GET') {
+      return fetch(event.request)
+        .then((fetchResponse) => {
+          // Pomijamy buforowanie dla żądań innych niż GET
+          if (event.request.method !== 'GET') {
+            return fetchResponse;
+          }
+
+          // Klonujemy odpowiedź, ponieważ jest strumieniem, który można odczytać tylko raz
+          const responseToCache = fetchResponse.clone();
+
+          caches.open(cacheName).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
           return fetchResponse;
-        }
-
-        // Klonujemy odpowiedź, ponieważ jest strumieniem, który można odczytać tylko raz
-        const responseToCache = fetchResponse.clone();
-
-        caches.open(cacheName).then((cache) => {
-          cache.put(event.request, responseToCache);
+        })
+        .catch(() => {
+          // Fallback dla braku połączenia - przekierowanie na stronę główną
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
         });
-
-        return fetchResponse;
-      });
-    }).catch(() => {
-      // Fallback dla braku połączenia - przekierowanie na stronę główną
-      if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
-      }
     })
   );
 });
@@ -87,4 +77,38 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+});
+
+// Obsługa kliknięć w powiadomienia
+self.addEventListener('notificationclick', (event) => {
+  console.log('Kliknięto w powiadomienie:', event);
+  
+  const notification = event.notification;
+  const action = event.action;
+  
+  if (action === 'close') {
+    notification.close();
+  } else {
+    // Sprawdź, czy jakaś karta z aplikacją jest już otwarta
+    event.waitUntil(
+      clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+      })
+      .then((clientList) => {
+        // Jeśli jest otwarta karta, skup się na niej
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // W przeciwnym razie otwórz nową kartę
+        if (clients.openWindow) {
+          return clients.openWindow('./');
+        }
+      })
+    );
+    
+    notification.close();
+  }
 });
