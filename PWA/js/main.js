@@ -1,6 +1,7 @@
 // Import funkcji z Firebase Configuration
-import { requestFCMToken, listenToMessages } from '../firebase-config.js';
+import { requestFCMToken, listenToMessages, sendTestNotification } from './firebase-config.js';
 
+// Po załadowaniu strony
 window.onload = () => {
   'use strict';
   
@@ -9,15 +10,24 @@ window.onload = () => {
   // Dodanie przycisku powiadomień do menu
   addNotificationButton();
   
-  // Sprawdzenie czy Service Worker jest obsługiwany
+  // Rejestracja Service Workerów
+  registerServiceWorkers();
+  
+  // Animacje dla kart kulinarnych
+  initializeCardAnimations();
+};
+
+// Funkcja rejestrująca Service Workery
+function registerServiceWorkers() {
   if ('serviceWorker' in navigator) {
     // Rejestracja głównego Service Workera
     navigator.serviceWorker.register('./sw.js')
       .then((registration) => {
-        console.log('Service Worker zarejestrowany pomyślnie.', registration);
-        // Inicjalizacja powiadomień po zarejestrowaniu Service Workera
+        console.log('Service Worker zarejestrowany pomyślnie:', registration);
+        
+        // Inicjalizacja nasłuchiwania wiadomości
         if ('Notification' in window && 'PushManager' in window) {
-          initializeNotifications(registration);
+          listenToMessages(showInAppNotification);
         }
       })
       .catch((error) => console.error('Błąd rejestracji Service Workera:', error));
@@ -25,130 +35,159 @@ window.onload = () => {
     // Rejestracja Service Workera dla Firebase Messaging
     navigator.serviceWorker.register('./firebase-messaging-sw.js')
       .then((registration) => {
-        console.log('Firebase Messaging Service Worker zarejestrowany pomyślnie.', registration);
+        console.log('Firebase Messaging Service Worker zarejestrowany pomyślnie:', registration);
       })
       .catch((error) => console.error('Błąd rejestracji Firebase Messaging Service Workera:', error));
+  } else {
+    console.warn('Service Workery nie są obsługiwane przez tę przeglądarkę');
+  }
+}
+
+// Funkcja do dodania przycisku powiadomień w menu
+function addNotificationButton() {
+  const menu = document.querySelector('.menu ul');
+  if (!menu) {
+    console.error('Nie znaleziono elementu menu');
+    return;
   }
   
-  // Funkcja do dodania przycisku powiadomień do menu
-  function addNotificationButton() {
-    console.log('Dodawanie przycisku powiadomień...');
-    const menu = document.querySelector('.menu ul');
-    console.log('Element menu:', menu);
+  // Tworzenie elementu przycisku
+  const menuItem = document.createElement('li');
+  const notificationBtn = document.createElement('button');
+  notificationBtn.textContent = 'Włącz powiadomienia';
+  notificationBtn.className = 'notification-btn';
+  notificationBtn.id = 'notificationBtn';
+  
+  // Aktualizacja przycisku na podstawie bieżących uprawnień
+  updateNotificationButtonState(notificationBtn);
+  
+  // Dodanie obsługi kliknięcia
+  notificationBtn.addEventListener('click', handleNotificationButtonClick);
+  
+  // Dodanie przycisku do menu
+  menuItem.appendChild(notificationBtn);
+  menu.appendChild(menuItem);
+  console.log('Przycisk powiadomień dodany do menu');
+}
+
+// Aktualizacja stanu przycisku powiadomień
+function updateNotificationButtonState(button) {
+  if (!button) return;
+  
+  if (Notification.permission === 'granted') {
+    button.textContent = 'Powiadomienia włączone';
+    button.classList.add('enabled');
+  } else if (Notification.permission === 'denied') {
+    button.textContent = 'Powiadomienia zablokowane';
+    button.disabled = true;
+  } else {
+    button.textContent = 'Włącz powiadomienia';
+  }
+}
+
+// Obsługa kliknięcia przycisku powiadomień
+
+async function handleNotificationButtonClick() {
+  console.log('Kliknięto przycisk powiadomień');
+  
+  try {
+    // Próba uzyskania tokenu FCM
+    const token = await requestFCMToken();
     
-    if (menu) {
-      const menuItem = document.createElement('li');
-      const notificationBtn = document.createElement('button');
-      notificationBtn.textContent = 'Włącz powiadomienia';
-      notificationBtn.className = 'notification-btn';
-      notificationBtn.addEventListener('click', () => {
-        console.log('Kliknięto przycisk powiadomień');
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.ready.then(registration => {
-            requestNotificationPermission(registration);
+    // Aktualizacja przycisku
+    const button = document.getElementById('notificationBtn');
+    updateNotificationButtonState(button);
+    
+    if (token) {
+      console.log('Powiadomienia zostały włączone');
+      
+      // Wyświetlanie tokenu na stronie
+      displayFCMToken(token);
+      
+      // Wysyłanie testowego powiadomienia po 2 sekundach
+      setTimeout(() => {
+        sendTestNotification();
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Błąd podczas włączania powiadomień:', error);
+  }
+}
+
+// Funkcja do wyświetlania tokenu FCM na stronie
+function displayFCMToken(token) {
+  const tokenElement = document.getElementById('fcm-token');
+  const copyButton = document.getElementById('copy-token-btn');
+  
+  if (tokenElement) {
+    // Konwersja obiektu subskrypcji na string, jeśli potrzeba
+    let tokenText = typeof token === 'string' ? token : JSON.stringify(token);
+    
+    // Aktualizacja tekstu z tokenem
+    tokenElement.textContent = tokenText;
+    
+    // Pokazanie przycisku kopiowania
+    if (copyButton) {
+      copyButton.style.display = 'block';
+      
+      // Dodanie obsługi kopiowania tokenu
+      copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(tokenText)
+          .then(() => {
+            // Tymczasowa informacja o skopiowaniu
+            const originalText = copyButton.textContent;
+            copyButton.textContent = 'Skopiowano!';
+            
+            setTimeout(() => {
+              copyButton.textContent = originalText;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Błąd podczas kopiowania tokenu:', err);
           });
-        }
       });
-      menuItem.appendChild(notificationBtn);
-      menu.appendChild(menuItem);
-      console.log('Przycisk powiadomień dodany');
-    } else {
-      console.error('Nie znaleziono elementu menu');
     }
   }
+}
+
+// Funkcja do wyświetlania powiadomień w aplikacji
+function showInAppNotification(title, body) {
+  // Tworzenie elementu powiadomienia
+  const notification = document.createElement('div');
+  notification.className = 'in-app-notification';
+  notification.innerHTML = `
+    <h3>${title}</h3>
+    <p>${body}</p>
+    <button class="close-btn">×</button>
+  `;
   
-  // Funkcja do zainicjowania powiadomień
-  function initializeNotifications(swRegistration) {
-    console.log('Inicjalizacja powiadomień...');
-    
-    // Nasłuchuj wiadomości Firebase, gdy aplikacja jest aktywna
-    listenToMessages(showInAppNotification);
-  }
+  // Dodanie do DOM
+  document.body.appendChild(notification);
   
-  // Funkcja do żądania uprawnień do powiadomień
-  async function requestNotificationPermission(swRegistration) {
-    try {
-      console.log('Żądanie uprawnień do powiadomień...');
-      
-      // Klucz VAPID - wygeneruj go w Firebase Console w Cloud Messaging -> Web Configuration -> Generate Key Pair
-      const vapidPublicKey = 'BM3fcqUy5T72t0iWqpN1s1lxczSA-iN3_uDDukh9LGAMkN56xqbN-oMKPPkH1hpYWXNAzxR9LLsNTZ0wW8pJPRo';
-      
-      // Pobierz token FCM
-      console.log('Próba uzyskania tokena FCM z kluczem VAPID:', vapidPublicKey.substring(0, 10) + '...');
-      const token = await requestFCMToken(vapidPublicKey);
-      
-      if (token) {
-        console.log('Token FCM uzyskany, pokazywanie testowego powiadomienia');
-        // Pokazanie testowego powiadomienia
-        showTestNotification(swRegistration);
-      } else {
-        console.error('Nie udało się uzyskać tokena FCM');
-      }
-    } catch (error) {
-      console.error('Błąd podczas żądania uprawnień:', error);
-    }
-  }
+  // Pokazanie powiadomienia z animacją
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
   
-  // Wyświetlenie testowego powiadomienia
-  function showTestNotification(swRegistration) {
-    const notificationOptions = {
-      body: 'Nowe przepisy czekają na odkrycie w aplikacji Maklowicz PWA!',
-      icon: './icons/apple-touch-icon.png',
-      vibrate: [100, 50, 100],
-      data: {
-        dateOfArrival: Date.now(),
-        primaryKey: 1
-      },
-      actions: [
-        {
-          action: 'explore',
-          title: 'Zobacz więcej'
-        },
-        {
-          action: 'close',
-          title: 'Zamknij'
-        }
-      ]
-    };
-    
-    swRegistration.showNotification('Witaj w świecie Maklowicza!', notificationOptions);
-  }
-  
-  // Funkcja do wyświetlania powiadomień w aplikacji
-  function showInAppNotification(title, body) {
-    const notification = document.createElement('div');
-    notification.className = 'in-app-notification';
-    notification.innerHTML = `
-      <h3>${title}</h3>
-      <p>${body}</p>
-      <button class="close-btn">×</button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Pokaż notyfikację
+  // Automatyczne ukrycie po 5 sekundach
+  setTimeout(() => {
+    notification.classList.remove('show');
     setTimeout(() => {
-      notification.classList.add('show');
-    }, 10);
-    
-    // Ukryj po 5 sekundach
-    setTimeout(() => {
-      notification.classList.remove('show');
-      setTimeout(() => {
-        notification.remove();
-      }, 300);
-    }, 5000);
-    
-    // Obsługa przycisku zamknięcia
-    notification.querySelector('.close-btn').addEventListener('click', () => {
-      notification.classList.remove('show');
-      setTimeout(() => {
-        notification.remove();
-      }, 300);
-    });
-  }
+      notification.remove();
+    }, 300);
+  }, 5000);
   
-  // Animacje dla kart kulinarnych
+  // Obsługa przycisku zamknięcia
+  notification.querySelector('.close-btn').addEventListener('click', () => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  });
+}
+
+// Inicjalizacja animacji dla kart
+function initializeCardAnimations() {
   const catCards = document.querySelectorAll('.cat-card');
   if (catCards.length > 0) {
     catCards.forEach((card, index) => {
@@ -156,4 +195,4 @@ window.onload = () => {
       card.style.animationDelay = `${index * 0.2}s`;
     });
   }
-};
+}

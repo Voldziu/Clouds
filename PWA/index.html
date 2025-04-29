@@ -36,6 +36,14 @@
      
     </ul>
   </nav>
+
+  <div id="fcm-token-container" class="fcm-token-container">
+    <h3>Token FCM:</h3>
+    <div class="token-display">
+      <p id="fcm-token">Brak tokenu. Kliknij "Włącz powiadomienia", aby wygenerować token.</p>
+      <button id="copy-token-btn" class="copy-btn" style="display: none;">Kopiuj</button>
+    </div>
+  </div>
   
   <div class="container">
     <main>
@@ -67,7 +75,7 @@
       <p>&copy; 2025 Maklowicz PWA - Aplikacja na zajęcia z chmury</p>
     </footer>
   </div>
-  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="js/firebase-config.js"></script>
   <script src="js/main.js" type="module"></script>
 </body>
 </html>
