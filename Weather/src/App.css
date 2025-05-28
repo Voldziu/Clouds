@@ -1,0 +1,97 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.5s ease;
+  color: white;
+  padding: 20px;
+}
+
+.search-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 20px 0;
+}
+
+input, button {
+  margin: 10px;
+  padding: 12px;
+  border-radius: 5px;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+}
+
+input {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+button {
+  background-color: #0088ff;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #0066cc;
+}
+
+.location-button {
+  background-color: #4caf50;
+}
+
+.location-button:hover {
+  background-color: #388e3c;
+}
+
+#weatherInfo {
+  margin-top: 20px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 500px;
+  color: #333;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.weather-description {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin: 10px 0;
+}
+
+.weather-details {
+  text-align: left;
+  margin-top: 15px;
+}
+
+.weather-details p {
+  margin: 8px 0;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media (max-width: 600px) {
+  #weatherInfo {
+    width: 90%;
+    font-size: 14px;
+  }
+  
+  input, button {
+    width: 80%;
+    font-size: 16px;
+  }
+}
